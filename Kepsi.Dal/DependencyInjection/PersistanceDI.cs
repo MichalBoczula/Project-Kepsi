@@ -1,4 +1,8 @@
 ﻿using KeepItShort.Persistance.Context;
+
+using Kepsi.Bl.Interfaces;
+using Kepsi.Bl.Queries;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +15,7 @@ namespace KeepItShort.Persistance.DependencyInjection
         {
             services.AddDbContext<KeepItShortContext>(options =>
                 options.UseSqlServer(configuration.GetConnectionString("KeepItShort")));
-            //services.AddScoped<IProductsContext, ProductsContext>();
+            services.AddScoped<IDbManager, DbManager>();
             return services;
         }
     }

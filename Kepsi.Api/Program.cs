@@ -1,7 +1,15 @@
 using KeepItShort.Persistance.DependencyInjection;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Headers;
+using System.Net.Mail;
 using System.Text;
+
+using KeepItShort.Persistance.Models;
+
+using Kepsi.Api.Response;
+using Kepsi.Bl.Interfaces;
+
+using Newtonsoft.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -120,5 +128,82 @@ app.MapPost("/MakeItShortConversation", async () =>
             }
         }
     });
+
+
+app.MapGet("/ConversationWithEmails", async () =>
+    {
+        using (var scope = app.Services.CreateScope())
+        {
+            var dbManager = scope.ServiceProvider.GetRequiredService<IDbManager>();
+            var conversations = await dbManager.GetConversationWithEmails();
+
+            var conversation2 = conversations.First();
+            var email = conversation2.Emails.Take(1).First();
+            //var conversation = email.Select(x => x.Content).Aggregate("", (curr, next) => curr + ";mail;" + next);
+            var refactoredConversation = email.Content.Replace("\r\n", string.Empty);
+
+            string openaiApiKey = @"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";
+
+            string apiUrl = "https://api.openai.com/v1/chat/completions";
+
+            string jsonData = $@"{{
+            ""model"": ""gpt-3.5-turbo-1106"",
+            ""response_format"": {{ ""type"": ""json_object"" }},
+            ""messages"": [
+              {{
+                ""role"": ""system"",
+                ""content"": ""Create summary of conversation. Conversation consist of emails. Emails are divided by ;mail;. Summary should be in array of json. One json is one email. Each json consist of {{customerName, topic, phoneNumber, email, summary}}. Summary in json has 1 sentence which consist of from crucial information. Response must be in polish language. Response in Message object has content property. This property must be in json form, it's crucial to deserialize it easily to object in c#. So please don't put any unnecessary characters and white spaces into content object.""
+              }},
+              {{
+                ""role"": ""user"",
+                ""content"": ""This are e-mails with conversation to summarize: '{refactoredConversation}'""
+              }}
+            ]
+        }}";
+
+            using (HttpClient client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", openaiApiKey);
+                client.DefaultRequestHeaders
+                    .Accept
+                    .Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+
+                var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
+
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "relativeAddress");
+
+                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string result = await response.Content.ReadAsStringAsync();
+                    var json = JsonConvert.DeserializeObject<GptResponse>(result);
+                    GptContent customerInquiry = JsonConvert.DeserializeObject<GptContent>(json.choices.First().message.content);
+
+                    RefactoredEmail refactoredEmail = new RefactoredEmail()
+                                                          {
+                                                              CustomerName = customerInquiry.customerName,
+                                                              Topic = customerInquiry.topic,
+                                                              EmailAddress = customerInquiry.email,
+                                                              PhoneNumber = customerInquiry.phoneNumber,
+                                                              Summary = customerInquiry.summary,
+                                                              EmailId = email.Id,
+                                                          };
+
+                    var id = await dbManager.AddRefactoredEmail(refactoredEmail);
+                    return $"{id}";
+                }
+                else
+                {
+                    return $"Error: {response.StatusCode} - {response.ReasonPhrase}";
+                }
+            }
+
+
+        }
+    });
+
+
 
 app.Run();

@@ -1,4 +1,5 @@
 ﻿using KeepItShort.Persistance.Models;
+using Kepsi.Dal.Seed;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -7,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Kepsi.Dal.Models;
 
 namespace KeepItShort.Persistance.Context
 {
@@ -16,12 +18,15 @@ namespace KeepItShort.Persistance.Context
         {
         }
 
+        public DbSet<Conversation> Conversations { get; set; }
         public DbSet<Email> Emails { get; set; }
         public DbSet<RefactoredEmail> RefactoredEmails { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+            modelBuilder.AddConversation();
+            modelBuilder.AddEmail();
         }
     }
 }

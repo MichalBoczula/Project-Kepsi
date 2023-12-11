@@ -15,9 +15,11 @@ namespace KeepItShort.Persistance.Configuration
         {
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.Id);
-            builder.Property(x => x.Summary).HasColumnType("varchar");
-            builder.Property(x => x.Topic).HasColumnType("varchar");
-            builder.Property(x => x.CustomerName).HasColumnType("varchar");
+            builder.Property(x => x.Summary).HasColumnType("varchar(max)");
+            builder.Property(x => x.Topic).HasColumnType("varchar(max)");
+            builder.Property(x => x.CustomerName).HasColumnType("varchar(max)");
+            builder.HasOne(x => x.RefactoredConversationRef).WithMany(x => x.RefactoredEmails)
+                .HasForeignKey(x => x.RefactoredConversationId);
         }
     }
 }

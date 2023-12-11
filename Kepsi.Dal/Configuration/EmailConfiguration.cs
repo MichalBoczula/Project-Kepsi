@@ -16,9 +16,13 @@ namespace KeepItShort.Persistance.Configuration
             builder.HasKey(x => x.Id);
             builder.HasIndex(x => x.Id);
             builder.HasIndex(x => x.AddedDate);
-            builder.HasOne(x => x.RefactoredEmailRef).WithOne(x => x.EmailRef)
+            builder.HasOne(x => x.RefactoredEmailRef)
+                .WithOne(x => x.EmailRef)
                 .HasForeignKey<RefactoredEmail>(x => x.EmailId);
-            builder.Property(x => x.Content).HasColumnType("varchar");
+            builder.Property(x => x.Content).HasColumnType("varchar(max)");
+            builder.HasOne(x => x.Conversation)
+                .WithMany(x => x.Emails)
+                .HasForeignKey(x => x.ConversationId);
         }
     }
 }
